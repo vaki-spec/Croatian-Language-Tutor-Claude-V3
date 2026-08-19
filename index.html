@@ -1,0 +1,796 @@
+<!doctype html><html lang="de"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f6f2e9">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Kroatisch Tutor</title>
+<style>
+:root{--bg:#f6f2e9;--card:#fffdf8;--ink:#17211b;--muted:#68736d;--a:#176b57;--soft:#e3f0eb;--line:#dce3dd}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#121815;--card:#1b2420;--ink:#eef2ee;--muted:#93a199;--a:#3fbf9a;--soft:#20342c;--line:#2a352f}
+}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+main{max-width:720px;margin:auto;padding:env(safe-area-inset-top) 17px calc(90px + env(safe-area-inset-bottom))}
+header{padding:20px 2px 12px;display:flex;justify-content:space-between;align-items:center}h1{font-size:28px;margin:0}h2{margin:4px 0 10px}h3{margin:0 0 8px}.muted{color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 6px 20px #17351b0a}
+button{border:0;border-radius:14px;padding:13px 16px;background:var(--a);color:white;font-size:16px;font-weight:700;cursor:pointer}
+button.secondary{background:var(--soft);color:var(--ink)}button.ghost{background:transparent;color:var(--a);border:1px solid var(--line)}
+button:disabled{opacity:.55}
+.row{display:flex;gap:9px;flex-wrap:wrap}.row>*{flex:1}.space{display:flex;justify-content:space-between;gap:12px;align-items:center}.pill{background:var(--soft);padding:6px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.progress{height:9px;background:var(--soft);border-radius:99px;overflow:hidden}.progress>div{height:100%;background:var(--a)}
+.word{font-size:40px;font-weight:800;margin-top:20px}.pron{color:var(--muted);font-style:italic}.meaning{font-size:21px;margin:8px 0}
+.example{background:var(--soft);padding:14px;border-radius:14px;margin:15px 0}.example b{font-size:18px}.notice{font-size:13px;color:var(--muted);line-height:1.5}
+.option{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);margin:7px 0}
+.option.correct{background:#1f7a4f;color:#fff;border-color:#1f7a4f}
+.option.wrong{background:#a23b3b;color:#fff;border-color:#a23b3b}
+.stat{font-size:26px;font-weight:800}.hide{display:none}
+.lessonrow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.lessonrow:last-child{border-bottom:none}
+.badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px}
+.badge.done{background:#1f7a4f;color:#fff}.badge.due{background:#c8102e;color:#fff}.badge.locked{background:var(--soft);color:var(--muted)}
+nav{position:fixed;bottom:0;left:0;right:0;background:color-mix(in srgb, var(--bg) 92%, transparent);backdrop-filter:blur(14px);padding:9px 12px calc(9px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:720px;margin:auto}
+nav button{flex:1;font-size:13px;padding:11px 8px}
+[lang="hr"]{unicode-bidi:isolate}
+</style></head><body><main>
+<header><div><h1>🇭🇷 Kroatisch Tutor</h1><div class="muted">Deutsch → Hrvatski</div></div><span class="pill">Lokal</span></header>
+<section id="home"></section>
+<section id="lesson" class="hide"></section>
+<section id="quiz" class="hide"></section>
+<section id="review" class="hide"></section>
+<section id="progress" class="hide"></section>
+<section id="privacy" class="hide"></section>
+<nav>
+<button onclick="show('home')">Heute</button>
+<button onclick="show('progress')">Fortschritt</button>
+<button onclick="show('privacy')">Privat</button>
+</nav>
+</main>
+<script>
+/* ---------- Lektions-Daten: [hr, de, aussprache, beispiel_hr, beispiel_de, tipp] ---------- */
+const LESSONS = [
+{id:1, title:"Grüßen & höflich sein", words:[
+ ["Bok","Hi / Hallo","bok","Bok!","Hi!","Informell, unter Freunden."],
+ ["Dobar dan","Guten Tag","DO-bar dan","Dobar dan!","Guten Tag!","dobar = gut, dan = Tag."],
+ ["Dobro jutro","Guten Morgen","DO-bro YU-tro","Dobro jutro!","Guten Morgen!","jutro = Morgen."],
+ ["Dobra večer","Guten Abend","DO-bra WE-tscher","Dobra večer!","Guten Abend!","č ungefähr wie tsch."],
+ ["Hvala","Danke","HVA-la","Hvala!","Danke!",""],
+ ["Molim","Bitte / Gern geschehen","MO-lim","Hvala! — Molim!","Danke! — Bitte!","Sehr häufig, auch als Rückfrage: 'Wie bitte?'"],
+ ["Doviđenja","Auf Wiedersehen","do-vi-DJE-nja","Doviđenja!","Auf Wiedersehen!","Langsam in Silben lernen."],
+ ["Oprostite","Entschuldigung","o-pro-STI-te","Oprostite.","Entschuldigung.","Höflich/formell, auch um Aufmerksamkeit zu bekommen."]
+]},
+{id:2, title:"Zahlen 1–10", words:[
+ ["Jedan","Eins","YE-dan","Jedna kava, molim.","Ein Kaffee, bitte.",""],
+ ["Dva","Zwei","dva","Dva piva.","Zwei Bier.",""],
+ ["Tri","Drei","tri","Tri dana.","Drei Tage.",""],
+ ["Četiri","Vier","TSCHE-ti-ri","Četiri osobe.","Vier Personen.",""],
+ ["Pet","Fünf","pet","Pet minuta.","Fünf Minuten.",""],
+ ["Šest","Sechs","schest","Šest sati.","Sechs Uhr.",""],
+ ["Sedam","Sieben","SE-dam","Sedam dana.","Sieben Tage.",""],
+ ["Osam","Acht","O-sam","Osam eura.","Acht Euro.",""],
+ ["Devet","Neun","DE-vet","Devet mjeseci.","Neun Monate.",""],
+ ["Deset","Zehn","DE-set","Deset kuna.","Zehn Kuna.","Alte Währung, heute Euro."]
+]},
+{id:3, title:"Im Café", words:[
+ ["Kava","Kaffee","KA-va","Jednu kavu, molim.","Einen Kaffee, bitte.",""],
+ ["Čaj","Tee","tschai","Čaj s limunom.","Tee mit Zitrone.",""],
+ ["Voda","Wasser","VO-da","Čašu vode, molim.","Ein Glas Wasser, bitte.",""],
+ ["Račun, molim","Die Rechnung, bitte","RA-tschun molim","Račun, molim.","Die Rechnung, bitte.",""],
+ ["Živjeli","Prost","SCHIV-ye-li","Živjeli!","Prost!","Beim Anstoßen."],
+ ["Ukusno","Lecker","u-KUS-no","Vrlo je ukusno!","Es ist sehr lecker!",""],
+ ["Molim vas","Bitte (formell)","MO-lim vas","Molim vas, konobar!","Entschuldigung, Herr Ober!","Formelle Anrede, z.B. beim Rufen."],
+ ["Konobar","Kellner","KO-no-bar","Konobar, molim vas!","Kellner, bitte!","Weiblich: konobarica."]
+]},
+{id:4, title:"Farben", words:[
+ ["crven", "rot", "TSER-ven"],
+ ["plav", "blau", "plav"],
+ ["žut", "gelb", "zhut"],
+ ["zelen", "grün", "ZE-len"],
+ ["crn", "schwarz", "tsern"],
+ ["bijel", "weiß", "BI-yel"],
+ ["smeđ", "braun", "smedj"],
+ ["ružičast", "rosa", "RU-zhi-chast"],
+ ["narančast", "orange", "na-RAN-chast"],
+ ["siv", "grau", "siv"],
+]},
+{id:5, title:"Familie", words:[
+ ["otac", "Vater", "O-tats"],
+ ["majka", "Mutter", "MAI-ka"],
+ ["brat", "Bruder", "brat"],
+ ["sestra", "Schwester", "SES-tra"],
+ ["baka", "Oma", "BA-ka"],
+ ["djed", "Opa", "dyed"],
+ ["sin", "Sohn", "sin"],
+ ["kći", "Tochter", "kchi"],
+ ["teta", "Tante", "TE-ta"],
+ ["ujak", "Onkel (mütterlicherseits)", "U-yak"],
+]},
+{id:6, title:"Wochentage", words:[
+ ["ponedjeljak", "Montag", "po-ne-DYEL-yak"],
+ ["utorak", "Dienstag", "u-TO-rak"],
+ ["srijeda", "Mittwoch", "sri-YE-da"],
+ ["četvrtak", "Donnerstag", "CHET-vr-tak"],
+ ["petak", "Freitag", "PE-tak"],
+ ["subota", "Samstag", "su-BO-ta"],
+ ["nedjelja", "Sonntag", "ne-DYEL-ya"],
+ ["dan", "Tag", "dan"],
+ ["tjedan", "Woche", "TYE-dan"],
+ ["danas", "heute", "DA-nas"],
+]},
+{id:7, title:"Monate", words:[
+ ["siječanj", "Januar", "si-YE-chany"],
+ ["veljača", "Februar", "VEL-ya-cha"],
+ ["ožujak", "März", "O-zhu-yak"],
+ ["travanj", "April", "TRA-van"],
+ ["svibanj", "Mai", "SVI-ban"],
+ ["lipanj", "Juni", "LI-pan"],
+ ["srpanj", "Juli", "SR-pan"],
+ ["kolovoz", "August", "KO-lo-voz"],
+ ["rujan", "September", "RU-yan"],
+ ["listopad", "Oktober", "LIS-to-pad"],
+ ["studeni", "November", "STU-de-ni"],
+ ["prosinac", "Dezember", "PRO-si-nats"],
+]},
+{id:8, title:"Zeit & Tageszeit", words:[
+ ["sat", "Stunde / Uhr", "sat"],
+ ["minuta", "Minute", "mi-NU-ta"],
+ ["sada", "jetzt", "SA-da"],
+ ["kasnije", "später", "KAS-ni-ye"],
+ ["rano", "früh", "RA-no"],
+ ["kasno", "spät", "KAS-no"],
+ ["jutro", "Morgen", "YU-tro"],
+ ["podne", "Mittag", "POD-ne"],
+ ["popodne", "Nachmittag", "po-POD-ne"],
+ ["noć", "Nacht", "noch"],
+]},
+{id:9, title:"Wetter", words:[
+ ["sunce", "Sonne", "SUN-tse"],
+ ["kiša", "Regen", "KI-scha"],
+ ["snijeg", "Schnee", "SNI-yeg"],
+ ["vjetar", "Wind", "VYE-tar"],
+ ["oblak", "Wolke", "OB-lak"],
+ ["vruće", "heiß", "VRU-che"],
+ ["hladno", "kalt", "HLAD-no"],
+ ["toplo", "warm", "TOP-lo"],
+ ["magla", "Nebel", "MAG-la"],
+ ["oluja", "Sturm", "o-LU-ya"],
+]},
+{id:10, title:"Körperteile", words:[
+ ["glava", "Kopf", "GLA-va"],
+ ["oko", "Auge", "O-ko"],
+ ["uho", "Ohr", "U-ho"],
+ ["nos", "Nase", "nos"],
+ ["usta", "Mund", "US-ta"],
+ ["ruka", "Hand / Arm", "RU-ka"],
+ ["noga", "Bein / Fuß", "NO-ga"],
+ ["srce", "Herz", "SR-tse"],
+ ["leđa", "Rücken", "LE-dja"],
+ ["zub", "Zahn", "zub"],
+]},
+{id:11, title:"Kleidung", words:[
+ ["majica", "T-Shirt", "MA-yi-tsa"],
+ ["hlače", "Hose", "HLA-che"],
+ ["haljina", "Kleid", "HAL-yi-na"],
+ ["jakna", "Jacke", "YAK-na"],
+ ["cipele", "Schuhe", "TSI-pe-le"],
+ ["kapa", "Mütze", "KA-pa"],
+ ["čarape", "Socken", "cha-RA-pe"],
+ ["suknja", "Rock", "SUK-nya"],
+ ["kaput", "Mantel", "KA-put"],
+ ["remen", "Gürtel", "RE-men"],
+]},
+{id:12, title:"Zuhause", words:[
+ ["kuća", "Haus", "KU-cha"],
+ ["stan", "Wohnung", "stan"],
+ ["soba", "Zimmer", "SO-ba"],
+ ["kuhinja", "Küche", "ku-HI-nya"],
+ ["kupaonica", "Badezimmer", "ku-pa-o-NI-tsa"],
+ ["vrata", "Tür", "VRA-ta"],
+ ["prozor", "Fenster", "PRO-zor"],
+ ["krevet", "Bett", "KRE-vet"],
+ ["stol", "Tisch", "stol"],
+ ["stolica", "Stuhl", "sto-LI-tsa"],
+]},
+{id:13, title:"Essen", words:[
+ ["kruh", "Brot", "kruh"],
+ ["sir", "Käse", "sir"],
+ ["jaje", "Ei", "YA-ye"],
+ ["meso", "Fleisch", "ME-so"],
+ ["riba", "Fisch", "RI-ba"],
+ ["povrće", "Gemüse", "POV-rche"],
+ ["voće", "Obst", "VO-che"],
+ ["riža", "Reis", "RI-zha"],
+ ["juha", "Suppe", "YU-ha"],
+ ["salata", "Salat", "sa-LA-ta"],
+]},
+{id:14, title:"Obst & Gemüse", words:[
+ ["jabuka", "Apfel", "YA-bu-ka"],
+ ["banana", "Banane", "ba-NA-na"],
+ ["naranča", "Orange", "na-RAN-cha"],
+ ["rajčica", "Tomate", "RAI-chi-tsa"],
+ ["krumpir", "Kartoffel", "KRUM-pir"],
+ ["luk", "Zwiebel", "luk"],
+ ["mrkva", "Karotte", "MRK-va"],
+ ["grožđe", "Trauben", "GROZH-dje"],
+ ["lubenica", "Wassermelone", "lu-be-NI-tsa"],
+ ["krastavac", "Gurke", "KRAS-ta-vats"],
+]},
+{id:15, title:"Getränke", words:[
+ ["pivo", "Bier", "PI-vo"],
+ ["vino", "Wein", "VI-no"],
+ ["sok", "Saft", "sok"],
+ ["mlijeko", "Milch", "MLI-ye-ko"],
+ ["rakija", "Schnaps", "RA-ki-ya"],
+ ["limunada", "Limonade", "li-mu-NA-da"],
+ ["šampanjac", "Sekt / Champagner", "scham-PAN-yats"],
+ ["ledeni čaj", "Eistee", "LE-de-ni chai"],
+ ["mineralna voda", "Mineralwasser", "mi-ne-RAL-na VO-da"],
+ ["kakao", "Kakao", "ka-KA-o"],
+]},
+{id:16, title:"Verben – Grundlagen", words:[
+ ["biti", "sein", "BI-ti"],
+ ["imati", "haben", "I-ma-ti"],
+ ["ići", "gehen", "I-chi"],
+ ["raditi", "arbeiten / tun", "RA-di-ti"],
+ ["jesti", "essen", "YES-ti"],
+ ["piti", "trinken", "PI-ti"],
+ ["vidjeti", "sehen", "VI-dye-ti"],
+ ["znati", "wissen", "ZNA-ti"],
+ ["htjeti", "wollen", "HTYE-ti"],
+ ["moći", "können", "MO-chi"],
+]},
+{id:17, title:"Verben – Alltag", words:[
+ ["govoriti", "sprechen", "go-VO-ri-ti"],
+ ["čuti", "hören", "CHU-ti"],
+ ["čitati", "lesen", "CHI-ta-ti"],
+ ["pisati", "schreiben", "PI-sa-ti"],
+ ["spavati", "schlafen", "SPA-va-ti"],
+ ["živjeti", "leben", "ZHI-vye-ti"],
+ ["voljeti", "lieben / mögen", "VO-lye-ti"],
+ ["kupiti", "kaufen", "KU-pi-ti"],
+ ["platiti", "bezahlen", "PLA-ti-ti"],
+ ["pomoći", "helfen", "PO-mo-chi"],
+]},
+{id:18, title:"Adjektive – Gegensätze 1", words:[
+ ["velik", "groß", "VE-lik"],
+ ["malen", "klein", "MA-len"],
+ ["dobar", "gut", "DO-bar"],
+ ["loš", "schlecht", "losch"],
+ ["lijep", "schön", "LI-yep"],
+ ["ružan", "hässlich", "RU-zhan"],
+ ["brz", "schnell", "brz"],
+ ["spor", "langsam", "spor"],
+ ["jeftin", "billig", "YEF-tin"],
+ ["skup", "teuer", "skup"],
+]},
+{id:19, title:"Adjektive – Gegensätze 2", words:[
+ ["nov", "neu", "nov"],
+ ["star", "alt", "star"],
+ ["čist", "sauber", "chist"],
+ ["prljav", "schmutzig", "PRL-yav"],
+ ["pun", "voll", "pun"],
+ ["prazan", "leer", "PRA-zan"],
+ ["otvoren", "offen", "OT-vo-ren"],
+ ["zatvoren", "geschlossen", "ZAT-vo-ren"],
+ ["lak", "leicht", "lak"],
+ ["težak", "schwer", "TE-zhak"],
+]},
+{id:20, title:"Fragewörter & Konnektoren", words:[
+ ["tko", "wer", "tko"],
+ ["što", "was", "schto"],
+ ["gdje", "wo", "gdye"],
+ ["kada", "wann", "KA-da"],
+ ["zašto", "warum", "ZASCH-to"],
+ ["kako", "wie", "KA-ko"],
+ ["koliko", "wie viel", "KO-li-ko"],
+ ["i", "und", "i"],
+ ["ali", "aber", "A-li"],
+ ["ili", "oder", "I-li"],
+]},
+{id:21, title:"Zahlen 11–20", words:[
+ ["jedanaest", "elf", "ye-DA-na-est"],
+ ["dvanaest", "zwölf", "DVA-na-est"],
+ ["trinaest", "dreizehn", "TRI-na-est"],
+ ["četrnaest", "vierzehn", "che-TR-na-est"],
+ ["petnaest", "fünfzehn", "PET-na-est"],
+ ["šesnaest", "sechzehn", "SCHES-na-est"],
+ ["sedamnaest", "siebzehn", "se-DAM-na-est"],
+ ["osamnaest", "achtzehn", "o-SAM-na-est"],
+ ["devetnaest", "neunzehn", "de-VET-na-est"],
+ ["dvadeset", "zwanzig", "DVA-de-set"],
+]},
+{id:22, title:"Zahlen – große", words:[
+ ["trideset", "dreißig", "TRI-de-set"],
+ ["četrdeset", "vierzig", "che-TR-de-set"],
+ ["pedeset", "fünfzig", "PE-de-set"],
+ ["šezdeset", "sechzig", "SCHEZ-de-set"],
+ ["sedamdeset", "siebzig", "se-DAM-de-set"],
+ ["osamdeset", "achtzig", "o-SAM-de-set"],
+ ["devedeset", "neunzig", "de-VE-de-set"],
+ ["sto", "hundert", "sto"],
+ ["tisuću", "tausend", "TI-su-chu"],
+ ["milijun", "Million", "mi-LI-yun"],
+]},
+{id:23, title:"Richtungen & Orte", words:[
+ ["lijevo", "links", "LI-ye-vo"],
+ ["desno", "rechts", "DES-no"],
+ ["ravno", "geradeaus", "RAV-no"],
+ ["gore", "oben", "GO-re"],
+ ["dolje", "unten", "DOL-ye"],
+ ["blizu", "nah", "BLI-zu"],
+ ["daleko", "weit", "da-LE-ko"],
+ ["ovdje", "hier", "OV-dye"],
+ ["tamo", "dort", "TA-mo"],
+ ["između", "zwischen", "IZ-me-dju"],
+]},
+{id:24, title:"Verkehr", words:[
+ ["auto", "Auto", "AU-to"],
+ ["autobus", "Bus", "au-to-BUS"],
+ ["vlak", "Zug", "vlak"],
+ ["avion", "Flugzeug", "A-vi-on"],
+ ["brod", "Schiff", "brod"],
+ ["bicikl", "Fahrrad", "BI-tsikl"],
+ ["taksi", "Taxi", "TAK-si"],
+ ["cesta", "Straße", "TSES-ta"],
+ ["kolodvor", "Bahnhof", "ko-LOD-vor"],
+ ["zračna luka", "Flughafen", "ZRACH-na LU-ka"],
+]},
+{id:25, title:"Reisen & Hotel", words:[
+ ["putovnica", "Reisepass", "PU-tov-ni-tsa"],
+ ["karta", "Ticket / Karte", "KAR-ta"],
+ ["rezervacija", "Reservierung", "re-zer-VA-tsi-ya"],
+ ["hotel", "Hotel", "HO-tel"],
+ ["apartman", "Ferienwohnung", "a-PART-man"],
+ ["ključ", "Schlüssel", "klyuch"],
+ ["prtljaga", "Gepäck", "PRT-lya-ga"],
+ ["izlet", "Ausflug", "IZ-let"],
+ ["plaža", "Strand", "PLA-zha"],
+ ["kamp", "Campingplatz", "kamp"],
+]},
+{id:26, title:"Gesundheit & Notfall", words:[
+ ["liječnik", "Arzt", "LI-yech-nik"],
+ ["bolnica", "Krankenhaus", "BOL-ni-tsa"],
+ ["ljekarna", "Apotheke", "lye-KAR-na"],
+ ["bol", "Schmerz", "bol"],
+ ["lijek", "Medikament", "LI-yek"],
+ ["groznica", "Fieber", "GROZ-ni-tsa"],
+ ["prehlada", "Erkältung", "PREH-la-da"],
+ ["alergija", "Allergie", "a-ler-GI-ya"],
+ ["hitna pomoć", "Notruf / Rettungsdienst", "HIT-na PO-moch"],
+ ["osiguranje", "Versicherung", "o-si-gu-RAN-ye"],
+]},
+{id:27, title:"Stadt & Gebäude", words:[
+ ["grad", "Stadt", "grad"],
+ ["selo", "Dorf", "SE-lo"],
+ ["trg", "Platz", "trg"],
+ ["crkva", "Kirche", "TSRK-va"],
+ ["muzej", "Museum", "MU-zey"],
+ ["tržnica", "Markt", "TRZH-ni-tsa"],
+ ["banka", "Bank", "BAN-ka"],
+ ["pošta", "Post", "POSCH-ta"],
+ ["škola", "Schule", "SCHKO-la"],
+ ["knjižnica", "Bibliothek", "KNYIZH-ni-tsa"],
+]},
+{id:28, title:"Einkaufen", words:[
+ ["dućan", "Laden", "DU-chan"],
+ ["cijena", "Preis", "TSI-ye-na"],
+ ["novac", "Geld", "NO-vats"],
+ ["kartica", "Karte (Zahlung)", "KAR-ti-tsa"],
+ ["gotovina", "Bargeld", "go-TO-vi-na"],
+ ["popust", "Rabatt", "PO-pust"],
+ ["blagajna", "Kasse", "BLA-gai-na"],
+ ["vrećica", "Tüte", "VRE-chi-tsa"],
+ ["veličina", "Größe", "ve-li-CHI-na"],
+ ["kvaliteta", "Qualität", "kva-li-TE-ta"],
+]},
+{id:29, title:"Berufe", words:[
+ ["učitelj", "Lehrer", "U-chi-tely"],
+ ["inženjer", "Ingenieur", "in-zhe-NYER"],
+ ["kuhar", "Koch", "KU-har"],
+ ["vozač", "Fahrer", "VO-zach"],
+ ["prodavač", "Verkäufer", "pro-DA-vach"],
+ ["student", "Student", "stu-DENT"],
+ ["umjetnik", "Künstler", "UM-yet-nik"],
+ ["novinar", "Journalist", "no-vi-NAR"],
+ ["odvjetnik", "Anwalt", "OD-vyet-nik"],
+ ["policajac", "Polizist", "po-li-TSA-yats"],
+]},
+{id:30, title:"Tiere", words:[
+ ["pas", "Hund", "pas"],
+ ["mačka", "Katze", "MACH-ka"],
+ ["ptica", "Vogel", "PTI-tsa"],
+ ["konj", "Pferd", "kony"],
+ ["krava", "Kuh", "KRA-va"],
+ ["ovca", "Schaf", "OV-tsa"],
+ ["miš", "Maus", "misch"],
+ ["zec", "Hase", "zets"],
+ ["medvjed", "Bär", "MED-vyed"],
+ ["vuk", "Wolf", "vuk"],
+]},
+{id:31, title:"Natur", words:[
+ ["more", "Meer", "MO-re"],
+ ["planina", "Berg", "pla-NI-na"],
+ ["rijeka", "Fluss", "RI-ye-ka"],
+ ["jezero", "See", "YE-ze-ro"],
+ ["šuma", "Wald", "SHU-ma"],
+ ["polje", "Feld", "PO-lye"],
+ ["otok", "Insel", "O-tok"],
+ ["obala", "Küste", "O-ba-la"],
+ ["nebo", "Himmel", "NE-bo"],
+ ["zvijezda", "Stern", "ZVI-yez-da"],
+]},
+{id:32, title:"Gefühle", words:[
+ ["sretan", "glücklich", "SRE-tan"],
+ ["tužan", "traurig", "TU-zhan"],
+ ["ljut", "wütend", "lyut"],
+ ["umoran", "müde", "U-mo-ran"],
+ ["gladan", "hungrig", "GLA-dan"],
+ ["žedan", "durstig", "ZHE-dan"],
+ ["uzbuđen", "aufgeregt", "uz-BU-djen"],
+ ["uplašen", "ängstlich", "UP-la-schen"],
+ ["iznenađen", "überrascht", "iz-ne-NA-djen"],
+ ["zabrinut", "besorgt", "za-BRI-nut"],
+]},
+{id:33, title:"Small Talk", words:[
+ ["Kako si?", "Wie geht's dir?", "KA-ko si"],
+ ["Dobro sam", "Mir geht's gut", "DO-bro sam"],
+ ["Odakle si?", "Woher kommst du?", "O-dak-le si"],
+ ["Koliko imaš godina?", "Wie alt bist du?", "KO-li-ko i-masch go-DI-na"],
+ ["Drago mi je", "Freut mich", "DRA-go mi ye"],
+ ["Vidimo se", "Bis bald / man sieht sich", "VI-di-mo se"],
+ ["Nema na čemu", "Keine Ursache", "NE-ma na CHE-mu"],
+ ["Nema problema", "Kein Problem", "NE-ma pro-BLE-ma"],
+ ["Sve najbolje", "Alles Gute", "sve NAI-bo-lye"],
+ ["Sretan rođendan", "Alles Gute zum Geburtstag", "SRE-tan RO-djen-dan"],
+]},
+{id:34, title:"Nach dem Weg fragen", words:[
+ ["Gdje je...?", "Wo ist...?", "gdye ye"],
+ ["Kako doći do...?", "Wie komme ich zu...?", "KA-ko DO-chi do"],
+ ["Je li daleko?", "Ist es weit?", "ye li da-LE-ko"],
+ ["Možete li mi pomoći?", "Können Sie mir helfen?", "MO-zhe-te li mi PO-mo-chi"],
+ ["Izgubio sam se", "Ich habe mich verlaufen (m.)", "IZ-gu-bi-o sam se"],
+ ["Trebam pomoć", "Ich brauche Hilfe", "TRE-bam POmoch"],
+ ["Koliko košta?", "Wie viel kostet das?", "KO-li-ko KOSCH-ta"],
+ ["Gdje je WC?", "Wo ist die Toilette?", "gdye ye ve-tse"],
+ ["Govorite li engleski?", "Sprechen Sie Englisch?", "go-VO-ri-te li en-GLES-ki"],
+ ["Ne razumijem", "Ich verstehe nicht", "ne ra-ZU-mi-yem"],
+]},
+{id:35, title:"Zeitausdrücke", words:[
+ ["jučer", "gestern", "YU-cher"],
+ ["sutra", "morgen", "SU-tra"],
+ ["prekjučer", "vorgestern", "prek-YU-cher"],
+ ["prekosutra", "übermorgen", "pre-ko-SU-tra"],
+ ["ovaj tjedan", "diese Woche", "O-vai TYE-dan"],
+ ["sljedeći tjedan", "nächste Woche", "slye-DE-chi TYE-dan"],
+ ["prošli tjedan", "letzte Woche", "PROSCH-li TYE-dan"],
+ ["ujutro", "morgens", "U-yu-tro"],
+ ["navečer", "abends", "NA-ve-cher"],
+ ["poslije", "danach / später", "POS-li-ye"],
+]},
+{id:36, title:"Haushalt", words:[
+ ["peglati", "bügeln", "PE-gla-ti"],
+ ["čistiti", "putzen", "CHIS-ti-ti"],
+ ["prati", "waschen", "PRA-ti"],
+ ["kuhati", "kochen", "KU-ha-ti"],
+ ["posuđe", "Geschirr", "PO-su-dje"],
+ ["usisavač", "Staubsauger", "u-si-SA-vach"],
+ ["perilica", "Waschmaschine", "pe-RI-li-tsa"],
+ ["smeće", "Müll", "SME-che"],
+ ["ručnik", "Handtuch", "RUCH-nik"],
+ ["sapun", "Seife", "SA-pun"],
+]},
+{id:37, title:"Arbeit & Schule", words:[
+ ["posao", "Job / Arbeit", "PO-sao"],
+ ["ured", "Büro", "U-red"],
+ ["sastanak", "Meeting", "SAS-ta-nak"],
+ ["zadatak", "Aufgabe", "ZA-da-tak"],
+ ["rok", "Frist", "rok"],
+ ["plaća", "Gehalt", "PLA-cha"],
+ ["odmor", "Urlaub / Pause", "OD-mor"],
+ ["kolega", "Kollege", "ko-LE-ga"],
+ ["šef", "Chef", "schef"],
+ ["projekt", "Projekt", "PRO-yekt"],
+]},
+{id:38, title:"Technologie", words:[
+ ["telefon", "Telefon", "te-le-FON"],
+ ["računalo", "Computer", "ra-CHU-na-lo"],
+ ["internet", "Internet", "IN-ter-net"],
+ ["lozinka", "Passwort", "LO-zin-ka"],
+ ["poruka", "Nachricht", "PO-ru-ka"],
+ ["aplikacija", "App", "a-pli-KA-tsi-ya"],
+ ["baterija", "Akku", "ba-TE-ri-ya"],
+ ["punjač", "Ladegerät", "PU-nyach"],
+ ["wifi", "WLAN", "wifi"],
+ ["ekran", "Bildschirm", "EK-ran"],
+]},
+{id:39, title:"Sport & Hobbys", words:[
+ ["nogomet", "Fußball", "NO-go-met"],
+ ["plivanje", "Schwimmen", "PLI-van-ye"],
+ ["trčanje", "Laufen", "TR-chan-ye"],
+ ["čitanje", "Lesen", "CHI-tan-ye"],
+ ["glazba", "Musik", "GLAZ-ba"],
+ ["ples", "Tanz", "ples"],
+ ["slikanje", "Malen", "SLI-kan-ye"],
+ ["planinarenje", "Wandern", "pla-ni-NA-ren-ye"],
+ ["ribolov", "Angeln", "RI-bo-lov"],
+ ["jedrenje", "Segeln", "YED-ren-ye"],
+]},
+{id:40, title:"Feste & Jahreszeiten", words:[
+ ["proljeće", "Frühling", "PRO-lye-che"],
+ ["ljeto", "Sommer", "LYE-to"],
+ ["jesen", "Herbst", "YE-sen"],
+ ["zima", "Winter", "ZI-ma"],
+ ["Božić", "Weihnachten", "BO-zhich"],
+ ["Uskrs", "Ostern", "US-krs"],
+ ["Nova godina", "Neujahr", "NO-va go-DI-na"],
+ ["rođendan", "Geburtstag", "RO-djen-dan"],
+ ["vjenčanje", "Hochzeit", "VYEN-chan-ye"],
+ ["praznik", "Feiertag", "PRAZ-nik"],
+]}
+];
+const ALL_WORDS = LESSONS.flatMap(l=>l.words);
+const WORD_BY_HR = Object.fromEntries(ALL_WORDS.map(w=>[w[0],w]));
+
+/* ---------- Storage (mit Fallback, falls localStorage blockiert ist) ---------- */
+const KEY="kt_private_v2";
+const memoryFallback = {store:null};
+function safeGet(){
+  try{ const raw=localStorage.getItem(KEY); return raw?JSON.parse(raw):null; }
+  catch(e){ return memoryFallback.store; }
+}
+function safeSet(data){
+  try{ localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch(e){ memoryFallback.store = data; }
+}
+let s = safeGet() || {cards:{}, lessonsCompleted:{}, streak:0};
+function save(){ safeSet(s) }
+
+/* ---------- Leitner-Spaced-Repetition ---------- */
+const DAY = 86400000;
+const INTERVALS = [1,1,2,4,8,16]; // Tage, indiziert nach box
+
+function touchCard(hr, box, dueInDays){
+  s.cards[hr] = {box, due: Date.now() + dueInDays*DAY, seen:true};
+}
+function onLearnMark(hr, ok){
+  if(ok){ touchCard(hr, 1, INTERVALS[1]); }
+  else  { touchCard(hr, 0, 0); } // sofort wieder fällig
+  save();
+}
+function onReviewAnswer(hr, correct){
+  const c = s.cards[hr] || {box:0};
+  if(correct){ const b=Math.min(c.box+1,5); touchCard(hr,b,INTERVALS[b]); }
+  else       { touchCard(hr,0,INTERVALS[0]); }
+  save();
+}
+function dueCards(){
+  const now = Date.now();
+  return Object.keys(s.cards).filter(hr => s.cards[hr].due<=now);
+}
+function masteredCount(lesson){
+  return lesson.words.filter(w => (s.cards[w[0]]?.box||0) >= 3).length;
+}
+
+/* ---------- Navigation ---------- */
+function show(id){
+  document.querySelectorAll("main>section").forEach(x=>x.classList.add("hide"));
+  document.getElementById(id).classList.remove("hide");
+  ({home:renderHome, lesson:renderLesson, quiz:renderQuiz, review:renderReview, progress:renderProgress, privacy:renderPrivacy}[id])();
+}
+
+/* ---------- Home ---------- */
+function currentLessonIndex(){
+  for(let i=0;i<LESSONS.length;i++) if(!s.lessonsCompleted[LESSONS[i].id]) return i;
+  return LESSONS.length-1;
+}
+function renderHome(){
+  const li = currentLessonIndex();
+  const lesson = LESSONS[li];
+  const allDone = Object.keys(s.lessonsCompleted).length >= LESSONS.length;
+  const m = masteredCount(lesson);
+  const due = dueCards().length;
+  document.getElementById("home").innerHTML = `
+  <div class="card">
+    <div class="space"><div><div class="muted">${allDone ? "WIEDERHOLUNG" : "HEUTE"}</div><h2>${allDone ? "Alle Lektionen geschafft" : `Lektion ${li+1}: ${lesson.title}`}</h2></div><span class="pill">${lesson.words.length} Wörter</span></div>
+    ${allDone ? `<p>Du hast alle Lektionen durchlaufen. Halte deine Wörter mit den fälligen Wiederholungen frisch.</p>`
+              : `<p>Neue Ausdrücke für deine nächsten echten Gespräche.</p>
+                 <div class="progress"><div style="width:${lesson.words.length? m/lesson.words.length*100:0}%"></div></div>
+                 <p class="muted">${m}/${lesson.words.length} aktuell gemeistert</p>
+                 <button onclick="startLesson(${li})">${s.lessonsCompleted[lesson.id]?'Nochmal üben':'Lernen starten'}</button>`}
+  </div>
+  <div class="card">
+    <div class="space"><h3>🔁 Wiederholung</h3>${due>0?`<span class="pill">${due} fällig</span>`:''}</div>
+    <p class="notice">Wörter kommen nach dem Leitner-Prinzip zurück: unsichere/falsche Wörter schneller, sichere seltener.</p>
+    <button class="${due>0?'':'secondary'}" ${due===0?'disabled':''} onclick="show('review')">${due>0? `${due} Wörter wiederholen` : 'Nichts fällig – gut so!'}</button>
+  </div>`;
+}
+
+/* ---------- Lesson-Flow ---------- */
+let curLessonIdx=0, idx=0;
+function startLesson(li){ curLessonIdx=li; idx=0; show('lesson'); }
+function renderLesson(){
+  const lesson = LESSONS[curLessonIdx];
+  const w = lesson.words[idx];
+  document.getElementById("lesson").innerHTML = `
+  <div class="card">
+    <div class="space"><span class="pill">Wort ${idx+1}/${lesson.words.length}</span><span class="muted">${lesson.title}</span></div>
+    <div class="word" lang="hr">${w[0]}</div>
+    <div class="pron">${w[2]}</div>
+    <div class="meaning">${w[1]}</div>
+    ${w[3] ? `<div class="example"><b lang="hr">${w[3]}</b><br>${w[4]}</div>` : ''}
+    ${w[5] ? `<p class="notice">Merktipp: ${w[5]}</p>` : ''}
+    <div class="row">
+      <button onclick="markWord(true)">✓ Sicher</button>
+      <button class="secondary" onclick="markWord(false)">↻ Unsicher</button>
+    </div>
+  </div>`;
+}
+function markWord(ok){
+  const lesson = LESSONS[curLessonIdx];
+  const w = lesson.words[idx];
+  onLearnMark(w[0], ok);
+  if(idx < lesson.words.length-1){ idx++; renderLesson(); }
+  else { curQuiz = buildQuiz(lesson); qIdx=0; qScore=0; show('quiz'); }
+}
+
+/* ---------- Quiz (automatisch aus dem Lektionswortschatz generiert, Optionen gemischt) ---------- */
+let qIdx=0, qScore=0, curQuiz=[];
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function buildQuiz(lesson, n=6){
+  const picked = shuffle(lesson.words).slice(0, Math.min(n, lesson.words.length));
+  return picked.map(w=>{
+    const askHr = Math.random()<0.5;
+    const correct = askHr ? w[1] : w[0];
+    const pool = ALL_WORDS.filter(x=>x[0]!==w[0]).map(x=> askHr ? x[1] : x[0]);
+    const opts = shuffle([correct, ...shuffle(pool).slice(0,3)]);
+    return {question: askHr ? w[0] : w[1], askHr, correct, opts};
+  });
+}
+function renderQuiz(){
+  if(qIdx>=curQuiz.length) return finishQuiz();
+  const x = curQuiz[qIdx];
+  document.getElementById("quiz").innerHTML = `
+  <div class="card">
+    <div class="muted">QUIZ ${qIdx+1}/${curQuiz.length}</div>
+    <h2 ${x.askHr?'lang="hr"':''}>${x.question}</h2>
+    ${x.opts.map(o=>`<button class="option" ${x.askHr?'':'lang="hr"'} onclick='answerQuiz(this,${JSON.stringify(o)},${JSON.stringify(x.correct)})'>${o}</button>`).join("")}
+  </div>`;
+}
+function answerQuiz(btn,g,w){
+  document.querySelectorAll("#quiz .option").forEach(x=>x.disabled=true);
+  if(g===w){ btn.classList.add("correct"); qScore++; }
+  else{
+    btn.classList.add("wrong");
+    document.querySelectorAll("#quiz .option").forEach(x=>{ if(x.textContent===w) x.classList.add("correct"); });
+  }
+  setTimeout(()=>{ qIdx++; renderQuiz(); }, 650);
+}
+function finishQuiz(){
+  const lesson = LESSONS[curLessonIdx];
+  s.lessonsCompleted[lesson.id] = {score:qScore, total:curQuiz.length, date:new Date().toISOString()};
+  if(qScore===curQuiz.length) s.streak=(s.streak||0)+1;
+  save();
+  const perfect = qScore===curQuiz.length;
+  document.getElementById("quiz").innerHTML = `
+  <div class="card">
+    <h2>${perfect ? "🎉 Lektion bestanden!" : "Fast da – wir wiederholen."}</h2>
+    <div class="stat">${qScore}/${curQuiz.length}</div>
+    <p>${perfect ? "Die Wörter tauchen jetzt automatisch als Wiederholung wieder auf, damit sie langfristig sitzen." : "Kein Problem. Die Wörter kommen in der Wiederholung bald wieder."}</p>
+    <button onclick="show('home')">Zur Übersicht</button>
+  </div>`;
+}
+
+/* ---------- Review / Wiederholung ---------- */
+let revQueue=[], revIdx=0, revScore=0;
+function renderReview(){
+  revQueue = shuffle(dueCards()).slice(0,10);
+  revIdx=0; revScore=0;
+  stepReview();
+}
+function stepReview(){
+  if(revQueue.length===0){
+    document.getElementById("review").innerHTML = `<div class="card"><h2>Nichts fällig</h2><p>Komm später wieder – deine Wörter sind gerade alle frisch genug.</p><button onclick="show('home')">Zur Übersicht</button></div>`;
+    return;
+  }
+  if(revIdx>=revQueue.length) return finishReview();
+  const hr = revQueue[revIdx];
+  const w = WORD_BY_HR[hr];
+  const askHr = Math.random()<0.5; // Richtung zufällig
+  const correct = askHr ? w[1] : w[0];
+  const pool = ALL_WORDS.filter(x=>x[0]!==hr).map(x=> askHr ? x[1] : x[0]);
+  const distractors = shuffle(pool).slice(0,3);
+  const opts = shuffle([correct, ...distractors]);
+  document.getElementById("review").innerHTML = `
+  <div class="card">
+    <div class="muted">WIEDERHOLUNG ${revIdx+1}/${revQueue.length}</div>
+    <h2 ${askHr?'lang="hr"':''}>${askHr ? w[0] : w[1]}</h2>
+    ${opts.map(o=>`<button class="option" ${askHr?'':'lang="hr"'} onclick='answerReview(this,${JSON.stringify(o)},${JSON.stringify(correct)},${JSON.stringify(hr)})'>${o}</button>`).join("")}
+  </div>`;
+}
+function answerReview(btn,g,w,hr){
+  document.querySelectorAll("#review .option").forEach(x=>x.disabled=true);
+  const ok = g===w;
+  if(ok){ btn.classList.add("correct"); revScore++; }
+  else{
+    btn.classList.add("wrong");
+    document.querySelectorAll("#review .option").forEach(x=>{ if(x.textContent===w) x.classList.add("correct"); });
+  }
+  onReviewAnswer(hr, ok);
+  setTimeout(()=>{ revIdx++; stepReview(); }, 650);
+}
+function finishReview(){
+  document.getElementById("review").innerHTML = `
+  <div class="card">
+    <h2>Wiederholung fertig</h2>
+    <div class="stat">${revScore}/${revQueue.length}</div>
+    <p class="notice">Richtige Wörter kommen später wieder, falsche schon bald erneut.</p>
+    <button onclick="show('home')">Zur Übersicht</button>
+  </div>`;
+}
+
+/* ---------- Fortschritt ---------- */
+function renderProgress(){
+  const rows = LESSONS.map((l,i)=>{
+    const done = s.lessonsCompleted[l.id];
+    const due = l.words.filter(w=>s.cards[w[0]] && s.cards[w[0]].due<=Date.now()).length;
+    let badge = '<span class="badge locked">offen</span>';
+    if(done) badge = `<span class="badge done">${done.score}/${done.total}</span>`;
+    if(due>0) badge += ` <span class="badge due">${due} fällig</span>`;
+    return `<div class="lessonrow"><div><b>${l.title}</b><div class="muted">${l.words.length} Wörter</div></div>${badge}</div>`;
+  }).join("");
+  const totalMastered = ALL_WORDS.filter(w=>(s.cards[w[0]]?.box||0)>=3).length;
+  document.getElementById("progress").innerHTML = `
+  <div class="card">
+    <h2>Fortschritt</h2>
+    <div class="row">
+      <div><div class="stat">${totalMastered}/${ALL_WORDS.length}</div><div class="muted">Wörter gemeistert</div></div>
+      <div><div class="stat">${Object.keys(s.lessonsCompleted).length}/${LESSONS.length}</div><div class="muted">Lektionen</div></div>
+      <div><div class="stat">${s.streak||0}</div><div class="muted">perfekte Quizze</div></div>
+    </div>
+  </div>
+  <div class="card"><h3>Lektionen</h3>${rows}</div>`;
+}
+
+/* ---------- Privacy ---------- */
+function renderPrivacy(){
+  document.getElementById("privacy").innerHTML = `
+  <div class="card">
+    <h2>🔒 Privatsphäre</h2>
+    <p>Diese App ist local-first.</p>
+    <ul>
+      <li>Kein Konto</li>
+      <li>Keine Werbung</li>
+      <li>Keine Analyse/Tracker</li>
+      <li>Keine Standort-, Kamera-, Mikrofon-, Kontakte- oder Foto-Berechtigungen</li>
+      <li>Lernstand nur im Speicher dieser App/Webseite</li>
+    </ul>
+    <p class="notice">Eine Web-App kann nicht auf Daten anderer iPhone-Apps wie Nachrichten, Kontakte oder Fotos zugreifen, ohne entsprechende iOS-Berechtigungen – diese App fordert keine an.</p>
+  </div>
+  <div class="card">
+    <h3>Datenkontrolle</h3>
+    <div class="row">
+      <button onclick="exportData()" class="secondary">Export</button>
+      <button onclick="wipe()" class="ghost">Alles löschen</button>
+    </div>
+    <p class="notice">Export wird nur auf dein Gerät heruntergeladen; es gibt keinen automatischen Upload.</p>
+  </div>`;
+}
+function exportData(){
+  const b = new Blob([JSON.stringify(s,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(b);
+  a.download = "kroatisch-tutor-daten.json";
+  a.click();
+}
+function wipe(){
+  if(confirm("Alle lokalen Lerndaten löschen?")){
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    memoryFallback.store = null;
+    location.reload();
+  }
+}
+
+/* ---------- Start ---------- */
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
+show("home");
+</script>
+</body></html>
